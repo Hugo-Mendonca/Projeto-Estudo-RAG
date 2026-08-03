@@ -1,0 +1,70 @@
+/* Fundo principal de acordo com as especificações */
+.stApp {
+    background-color: #0E1117;
+}
+
+/* Sidebar com tom ligeiramente diferente para destaque sutil */
+[data-testid="stSidebar"] {
+    background-color: #14171c;
+    border-right: 1px solid #2a2d33;
+}
+
+/* Container de mensagens flexível para alinhamento */
+.msg-container {
+    display: flex;
+    width: 100%;
+    margin-bottom: 1.5rem;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.msg-user {
+    justify-content: flex-end;
+}
+
+.msg-ai {
+    justify-content: flex-start;
+}
+
+/* Design dos balões */
+.bubble {
+    padding: 1rem 1.2rem;
+    border-radius: 12px;
+    max-width: 75%;
+    line-height: 1.6;
+    font-size: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.bubble-user {
+    background-color: #1a365d; /* Azul discreto */
+    color: #ffffff;
+    border-bottom-right-radius: 2px;
+}
+
+.bubble-ai {
+    background-color: #1e222a; /* Cinza escuro */
+    color: #e2e8f0;
+    border-bottom-left-radius: 2px;
+    border: 1px solid #2d333b;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0E1117;
+}
+::-webkit-scrollbar-thumb {
+    background: #2d333b;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #444c56;
+}
