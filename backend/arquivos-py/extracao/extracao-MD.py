@@ -1,8 +1,8 @@
 from docling.document_converter import DocumentConverter
 import os
 
-arquivo_pdf = "/home/hugo/Downloads/projeto-Rag_SI5/Projeto-Estudo-RAG/backend/arquivo-pdf/Relatório Covertype.pdf"
-output_complete= "/home/hugo/Downloads/projeto-Rag_SI5/Projeto-Estudo-RAG/backend/arquivo-md/Relatório Covertype.md"
+arquivo_pdf = r"C:\Users\hugo.bastos\Desktop\Projeto-RAG-SI5\Projeto-Estudo-RAG\backend\arquivo-dados\arquivo-pdf\Relatório Covertype.pdf"
+output_complete= r"C:\Users\hugo.bastos\Desktop\Projeto-RAG-SI5\Projeto-Estudo-RAG\backend\arquivo-dados\arquivo-md\Relatório Covertype.md"
 
 converter = DocumentConverter()
 documento = converter.convert(arquivo_pdf).document

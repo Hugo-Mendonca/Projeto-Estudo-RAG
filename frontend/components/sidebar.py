@@ -8,8 +8,8 @@ def render_sidebar() -> None:
     """Renderiza os elementos visuais e de navegação da barra lateral."""
     with st.sidebar:
         # Logo e Nome
-        st.markdown("### 💠 Logo Placeholder")
-        st.markdown("## Sistema RAG")
+        st.image(r"C:\Users\hugo.bastos\Desktop\Projeto-RAG-SI5\Projeto-Estudo-RAG\frontend\utils\Logo RAG.avif", use_container_width=True)
+        st.markdown("## Sistema RAG do Relatório do CoverType")
         st.write("") # Espaçamento
         
         # Botão nova conversa
