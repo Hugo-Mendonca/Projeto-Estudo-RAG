@@ -1,10 +1,14 @@
 import os
+import logging
 from dotenv import load_dotenv
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_elasticsearch import ElasticsearchStore
 from langchain_huggingface import HuggingFaceEmbeddings
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # 1. Carregamento de variáveis no escopo global (Executado apenas 1x)
 load_dotenv()
@@ -59,30 +63,30 @@ def format_docs(docs: list) -> str:
         formatted.append(f"## Documento {k}\n{doc.page_content}\nSource: {source}")
     return "\n\n".join(formatted)
 
-def rag(user_query: str) -> str:
+async def rag(user_query: str) -> str:
     """
     Executa o pipeline RAG completo: Busca -> Formatação -> Geração.
     """
-    # Realiza a busca vetorial (KNN) já retornando objetos 'Document' do LangChain
-    # Opcional: Adicionar k=5 para limitar a quantidade de chunks trazidos
-    resultados = vector_store.similarity_search(user_query)
-    
-    # Validação rigorosa: Cláusula de guarda
-    if not resultados:
-        return "Eu não encontrei informações no relatório sobre essa pergunta..."
-    
-    # Formata os documentos para serem injetados no prompt
-    context_str = format_docs(resultados)
-    
-    # Invoca a cadeia com as chaves exatas do PromptTemplate
-    resposta = rag_pipeline.invoke({
-        "contexto": context_str, 
-        "pergunta": user_query
-    })
-    
-    return resposta
-
-# Teste de execução
-if __name__ == "__main__":
-    teste = rag("Como foram os resultados dos algoritmos de árvore?")
-    print(teste)
+    try:
+        # Realiza a busca vetorial (KNN) já retornando objetos 'Document' do LangChain
+        # Opcional: Adicionar k=5 para limitar a quantidade de chunks trazidos
+        resultados = await vector_store.asimilarity_search(user_query)
+        
+        # Validação rigorosa: Cláusula de guarda
+        if not resultados:
+            return "Eu não encontrei informações no relatório sobre essa pergunta..."
+        
+        # Formata os documentos para serem injetados no prompt
+        context_str = format_docs(resultados)
+        
+        # Invoca a cadeia com as chaves exatas do PromptTemplate
+        resposta = await rag_pipeline.ainvoke({
+            "contexto": context_str, 
+            "pergunta": user_query
+        })
+        
+        return resposta
+    except Exception as e:
+        logger.error(f"Erro crítico no pipeline RAG: {str(e)}")
+        # Retornamos uma mensagem amigável para o usuário no frontend
+        return "Desculpe, ocorreu um erro interno ao processar sua pergunta. Tente novamente em instantes."
