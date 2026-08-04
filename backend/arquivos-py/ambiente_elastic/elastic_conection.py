@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
+from elasticsearch.helpers import BulkIndexError # <-- Importação adicionada aqui
 
 # Novas importações da arquitetura Client-Side (LangChain)
 from langchain_core.documents import Document
@@ -42,7 +43,7 @@ else:
 # ==========================================
 # 3. EXTRAÇÃO E CHUNKING
 # ==========================================
-caminho_arquivo_chunks = r"C:\Users\hugo.bastos\Desktop\Projeto-RAG-SI5\Projeto-Estudo-RAG\backend\arquivo-dados\arquivo-md\chunk copy.md"
+caminho_arquivo_chunks = "/home/hugo/Downloads/projeto-Rag_SI5/Projeto-Estudo-RAG/backend/arquivo-dados/arquivo-md/chunk.md"
 
 with open(caminho_arquivo_chunks, "r", encoding="utf-8") as f:
     conteudo = f.read()
@@ -53,7 +54,7 @@ print(f"Total de textos encontrados: {len(lista_chunks)}")
 
 # Transformando strings puras em objetos Document do LangChain
 docs = [
-    Document(page_content=texto, metadata={"chunk_id": i, "origem": "chunk_copy.md"}) 
+    Document(page_content=texto, metadata={"chunk_id": i, "origem": "chunk.md"}) 
     for i, texto in enumerate(lista_chunks, start=1)
 ]
 
@@ -71,7 +72,7 @@ modelo_embedding = HuggingFaceEmbeddings(
 # 5. INGESTÃO NO ELASTICSEARCH
 # ==========================================
 # IMPORTANTE: Mudamos o nome do índice para evitar conflitos com os testes anteriores
-index_name = "projeto_rag_chunks_v2" 
+index_name = "projeto_rag_chunks" 
 
 print(f"Iniciando a geração de vetores e a ingestão no índice '{index_name}'...")
 
@@ -86,5 +87,10 @@ try:
     )
     print("🚀 Ingestão concluída com sucesso! Vetores gerados e armazenados.")
 
+except BulkIndexError as e:
+    print("\n❌ O Elasticsearch rejeitou os documentos. Veja o motivo exato (Mostrando o 1º erro):")
+    # Imprime os detalhes do erro do primeiro documento rejeitado
+    print(e.errors[0])
+    
 except Exception as e:
-    print(f"❌ Erro inesperado durante a ingestão: {e}")
+    print(f"\n❌ Erro inesperado durante a ingestão: {e}")
