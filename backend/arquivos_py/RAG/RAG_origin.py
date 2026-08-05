@@ -3,7 +3,7 @@ import logging
 from dotenv import load_dotenv
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_elasticsearch import ElasticsearchStore
 from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -58,19 +58,20 @@ rag_pipeline = template | llm | StrOutputParser()
 def format_docs(docs: list) -> str:
     """Função auxiliar para formatar a lista de Documentos em uma string."""
     formatted = []
-    for k, doc in enumerate(docs, start=1):
+    for k, (doc,score) in enumerate(docs, start=1):
         source = doc.metadata.get("source", "Fonte Desconhecida")
-        formatted.append(f"## Documento {k}\n{doc.page_content}\nSource: {source}")
+        score_formated = f"{score:.4f}"
+        formatted.append(f"## Documento {k}\n{doc.page_content}\nSource: {source}\n Score: {score_formated}")
     return "\n\n".join(formatted)
 
-async def rag(user_query: str) -> str:
+async def rag(user_query: str) -> dict:
     """
     Executa o pipeline RAG completo: Busca -> Formatação -> Geração.
     """
     try:
         # Realiza a busca vetorial (KNN) já retornando objetos 'Document' do LangChain
         # Opcional: Adicionar k=5 para limitar a quantidade de chunks trazidos
-        resultados = await vector_store.asimilarity_search(user_query)
+        resultados = await vector_store.asimilarity_search_with_score(user_query, k = 5)
         
         # Validação rigorosa: Cláusula de guarda
         if not resultados:
@@ -80,12 +81,25 @@ async def rag(user_query: str) -> str:
         context_str = format_docs(resultados)
         
         # Invoca a cadeia com as chaves exatas do PromptTemplate
-        resposta = await rag_pipeline.ainvoke({
+        resposta_ia = await rag_pipeline.ainvoke({
             "contexto": context_str, 
             "pergunta": user_query
         })
         
-        return resposta
+        lista_de_fontes = []
+        
+        for doc,score in resultados:
+            lista_de_fontes.append({
+                'conteudo': doc.page_content,
+                'origem': doc.metadata.get("source", "Fonte Desconhecida"),
+                "score": round(score,4)                
+            
+            })
+        
+        return {
+            "resposta": resposta_ia,
+            "fontes_utilizadas": lista_de_fontes }   
+                                   
     except Exception as e:
         logger.error(f"Erro crítico no pipeline RAG: {str(e)}")
         # Retornamos uma mensagem amigável para o usuário no frontend
