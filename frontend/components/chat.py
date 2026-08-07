@@ -7,7 +7,7 @@ import requests
 import uuid
 from datetime import datetime, timezone
 
-def salvar_mensagem_api(chat_id: str, role: str, text_content: str, fontes: list = None):
+def salvar_mensagem_api(chat_id: str,titulo: str, role: str, text_content: str, fontes: list = None):
     """
     Função auxiliar para salvar as mensagens e fontes no banco Elasticsearch.
     """
@@ -27,9 +27,10 @@ def salvar_mensagem_api(chat_id: str, role: str, text_content: str, fontes: list
             
     dados = {
         "chat_id": chat_id,
+        "title": titulo,
         "role": role,
         "date": datetime.now(timezone.utc).isoformat(), 
-        "text_content": text_content,
+        "text_content": str(text_content),
         "fontes": fontes_limpas
     }
     
@@ -49,15 +50,41 @@ def salvar_mensagem_api(chat_id: str, role: str, text_content: str, fontes: list
             
     except Exception as e:
         print(f"\n🚨 ERRO DE CONEXÃO COM A API: {str(e)}\n")
+        
+        
+def carregar_mensagens_do_banco(chat_id: str):
+    """Busca as mensagens de uma sessão específica na API."""
+    try:
+        resposta = requests.get(
+            "http://localhost:8000/api/chat/history",
+            params={"chat_id": chat_id} 
+        )
+        if resposta.status_code == 200:
+            return resposta.json().get("mensagens", [])
+    except Exception as e:
+        print(f"Erro ao buscar mensagens do backend: {e}")
+    return []
 
 def render_chat() -> None:
     # URL do nosso backend
     API_URL = "http://localhost:8000/api/chat"
     
-    # --- MUDANÇA 1: Controle de estado do chat_id ---
+# 1. Verifica se a bandeira foi levantada pela sidebar
+    if st.session_state.get("deve_carregar_historico"):
+        print(f"\n[DEBUG] 🚩 Bandeira ativada! Buscando chat_id: {st.session_state.chat_id}")
+        st.session_state.messages = carregar_mensagens_do_banco(st.session_state.chat_id)
+        
+        # Abaixa a bandeira para não ficar recarregando em todo clique na tela
+        st.session_state.deve_carregar_historico = False 
+        
+    # 2. Se não tem bandeira e a lista não existe, é uma conversa nova
+    elif "messages" not in st.session_state:
+        st.session_state.messages = []
+        
+    # 3. Garantia do chat_id
     if "chat_id" not in st.session_state:
         st.session_state.chat_id = None
-    
+        
     """
     Renderiza o histórico de mensagens e o campo fixo de entrada na parte inferior,
     agora integrado com a API do FastAPI.
@@ -114,15 +141,17 @@ def render_chat() -> None:
             titulo_pergunta = prompt[:30].strip()
             codigo_unico = uuid.uuid4().hex[:4]
             # O chat_id vira algo como: "Qual o nome do projeto?... - 1a2b"
+            st.session_state.chat_title = f"{titulo_pergunta}..."
             st.session_state.chat_id = f"{titulo_pergunta}... - {codigo_unico}"
-        
+            
+        titulo_atual = st.session_state.get("chat_title", st.session_state.chat_id)        
         # 1. Adiciona e exibe mensagem do usuário
         st.session_state.messages.append({"role": "user", "content": prompt})
         with chat_container:
             render_message("user", prompt)
             
             # --- MUDANÇA 3: Dispara o salvamento da mensagem do usuário ---
-            salvar_mensagem_api(st.session_state.chat_id, "user", prompt)
+            salvar_mensagem_api(st.session_state.chat_id, titulo_atual, "user", prompt)            
             
             # 2. Comunicação com o Backend
             with st.spinner("Analisando os documentos e gerando resposta..."):
@@ -168,7 +197,7 @@ def render_chat() -> None:
             })
             
             # --- MUDANÇA 4: Dispara o salvamento da mensagem da IA (com as fontes) ---
-            salvar_mensagem_api(st.session_state.chat_id, "assistant", texto_resposta, fontes)
+            salvar_mensagem_api(st.session_state.chat_id, titulo_atual, "assistant", texto_resposta, fontes)
             
             # 4. Reconstrói a tela para renderizar a nova mensagem da IA
             st.rerun()

@@ -70,18 +70,32 @@ async def listar_sessoes():
     try:
         # Agregação para buscar os chat_ids únicos
         query = {
-            "size": 0,
-            "aggs": {
-                "sessoes_unicas": {
-                    "terms": {
-                        "field": "chat_id.keyword", # Usa .keyword para campos de texto exatos
-                        "size": 100,
-                        "order": {"_key": "desc"} # Ordena para os mais recentes (se o ID for baseado em data, por exemplo)
+                    "size": 0,
+                    "aggs": {
+                        "sessoes_unicas": {
+                            "terms": {
+                                "field": "chat_id", # Exatamente como você fez, sem o .keyword!
+                                "size": 100,
+                                # Ordena pela data da mensagem mais recente daquela sessão
+                                "order": { "ultima_mensagem": "desc" } 
+                            },
+                            "aggs": {
+                                # 1. Pega a maior data (mais recente) dentro dessa conversa
+                                "ultima_mensagem": {
+                                    "max": { "field": "date" }
+                                },
+                                # 2. Puxa o título para podermos desenhar na interface
+                                "titulo": {
+                                    "terms": {
+                                        "field": "title.keyword", # Aqui usa .keyword por causa do multi-field
+                                        "size": 1
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        }
-        
+    
         resposta = client.search(index=index, body=query)
         
         # Extrai apenas os nomes dos IDs da resposta complexa do Elastic
@@ -92,13 +106,13 @@ async def listar_sessoes():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar sessões: {str(e)}")    
     
-@app.get("/api/chat/history/{chat_id}")
+@app.get("/api/chat/history")
 async def buscar_historico(chat_id: str):
     try:
         # Montamos a query de busca no Elasticsearch
         query = {
             "query": {
-                "term": {
+                "match": {
                     "chat_id": chat_id
                 }
             },
@@ -113,12 +127,17 @@ async def buscar_historico(chat_id: str):
         # Extraímos apenas a parte que importa (o _source de cada documento)
         mensagens = []
         for hit in resposta["hits"]["hits"]:
-            mensagens.append(hit["_source"])
-            
+            fonte = hit["_source"]
+            mensagens.append({
+                "role": fonte.get("role"),
+                "content": fonte.get("text_content"),
+                "fontes": fonte.get("fontes", [])
+            })            
         return {"status": "sucesso", "mensagens": mensagens}
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao buscar histórico: {str(e)}")
+        print(f"Erro ao carregar histórico: {e}")
+        return {"mensagens": []}
 
 
 @app.post("/api/chat")
