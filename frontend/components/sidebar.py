@@ -4,7 +4,6 @@ Componente de interface para a barra lateral (Sidebar).
 import streamlit as st
 from utils.state_manager import clear_chat
 import requests
-import uuid
 
 BASE_URL = "http://localhost:8000/api/chat"
 
@@ -17,6 +16,7 @@ def carregar_sessoes_api():
         return []
     except:
         return []
+    
 
 def render_sidebar() -> None:
     """Renderiza os elementos visuais e de navegação da barra lateral."""
@@ -41,17 +41,23 @@ def render_sidebar() -> None:
             st.info("Nenhuma conversa salva ainda.")
         else:
             for sessao_id in sessoes_antigas:
-                # Cria um botão para cada sessão
-                if st.button(f"📄 {sessao_id[:8]}...", key=sessao_id, use_container_width=True):
-                    # Se o usuário clicar, mudamos o chat ativo
+                
+                # O chat_id é algo como "Olá faça um resumo... - 4b2a"
+                # Vamos dividir pelo traço e pegar só a primeira parte para o título
+                if " - " in sessao_id:
+                    titulo_limpo = sessao_id.split(" - ")[0]
+                else:
+                    titulo_limpo = sessao_id[:25] # Backup de segurança
+                
+                # Renderiza o botão com o título limpo
+                if st.button(f" {titulo_limpo}", key=sessao_id, width="stretch"):
                     st.session_state.chat_id = sessao_id
+                    st.session_state.deve_carregar_historico = True
                     
-                    # Removemos as mensagens atuais do estado para forçar o chat.py a 
-                    # puxar o histórico dessa sessão específica no banco
                     if "messages" in st.session_state:
                         del st.session_state["messages"]
                         
-                    st.rerun() # Atualiza a página para carregar o chat selecionado
+                    st.rerun()
         
         # Spacer natural usando CSS / markdown para empurrar footer
         st.markdown("<br><br><br><br><br><br>", unsafe_allow_html=True)
